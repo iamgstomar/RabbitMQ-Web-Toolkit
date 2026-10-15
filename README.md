@@ -977,7 +977,7 @@ Until a license is explicitly added, do not assume that the project is licensed 
 
 ## Author
 
-**Gajendra Singh Tomar**
+**Gajendra Tomar**
 
 GitHub: [@iamgstomar](https://github.com/iamgstomar)
 
