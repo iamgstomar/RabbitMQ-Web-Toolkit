@@ -986,3 +986,6 @@ Explore more projects and development work on GitHub.
 ---
 
 *RabbitMQ Web Toolkit — practical administration, monitoring, and QA diagnostics for RabbitMQ environments.*
+
+<img width="1444" height="596" alt="image" src="https://github.com/user-attachments/assets/4d16b487-d135-4879-903c-1bd4476b097d" />
+
