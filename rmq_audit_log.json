@@ -1,0 +1,32 @@
+[
+  {
+    "timestamp": "2026-06-18 14:38:39",
+    "user": "stc",
+    "host": "172.16.4.155:15672",
+    "action": "Connect",
+    "detail": "Host: 172.16.4.155:15672",
+    "status": "\u2705 Success",
+    "source": "RMQ QA Utility",
+    "vhost": ""
+  },
+  {
+    "timestamp": "2026-06-18 14:38:48",
+    "user": "stc",
+    "host": "172.16.4.155:15672",
+    "action": "Disconnect",
+    "detail": "",
+    "status": "\u2705 Success",
+    "source": "RMQ QA Utility",
+    "vhost": ""
+  },
+  {
+    "timestamp": "2026-06-18 14:38:59",
+    "user": "stc",
+    "host": "172.16.4.155:15672",
+    "action": "Connect",
+    "detail": "Host: 172.16.4.155:15672",
+    "status": "\u2705 Success",
+    "source": "RMQ QA Utility",
+    "vhost": ""
+  }
+]

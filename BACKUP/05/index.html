@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<style>
+/* ── Reset & Variables ────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#FF6600;--orange-dk:#CC4400;--orange-dim:#994400;
+  --bg:#1C1C1C;--bg-panel:#262626;--bg-row:#2E2E2E;--bg-hdr:#333333;
+  --text:#F0F0F0;--text-dim:#AAAAAA;--text-dark:#1A1A1A;
+  --green:#27AE60;--red:#C0392B;--blue:#2980B9;--yellow:#F39C12;
+  --border:#444444;--radius:4px;
+}
+body{font-family:"Segoe UI",Consolas,monospace;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+
+/* ── Topbar ───────────────────────────────────────────────────────────── */
+#topbar{background:var(--bg-panel);border-bottom:3px solid var(--orange);display:flex;align-items:center;padding:0 16px;height:52px;gap:12px;position:sticky;top:0;z-index:100}
+.brand{color:var(--orange);font-size:18px;font-weight:700;letter-spacing:1px;margin-right:8px}
+.conn-field{display:flex;flex-direction:column;gap:1px}
+.conn-field label{font-size:9px;color:var(--text-dim);text-transform:uppercase}
+.conn-field input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:3px 7px;border-radius:var(--radius);font-size:12px;width:120px;outline:none}
+.conn-field input:focus{border-color:var(--orange)}
+.conn-field.narrow input{width:70px}
+#btn-connect{background:var(--orange);color:#fff;border:none;padding:7px 18px;border-radius:var(--radius);font-weight:700;cursor:pointer;font-size:12px;letter-spacing:.5px}
+#btn-connect:hover{background:var(--orange-dk)}
+#btn-disconnect{background:var(--bg-hdr);color:var(--text-dim);border:none;padding:7px 18px;border-radius:var(--radius);font-weight:700;cursor:pointer;font-size:12px}
+#btn-disconnect:not(:disabled):hover{background:var(--red);color:#fff}
+#btn-disconnect:disabled{opacity:.4;cursor:not-allowed}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#555;flex-shrink:0}
+.status-dot.ok{background:var(--green)}
+.status-dot.err{background:var(--red)}
+#status-text{font-size:11px;color:var(--text-dim);max-width:280px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.badge{background:var(--orange);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px}
+
+/* ── Nav tabs ─────────────────────────────────────────────────────────── */
+#nav{background:var(--bg-panel);display:flex;border-bottom:1px solid var(--border);padding:0 16px;overflow-x:auto;gap:2px}
+.nav-tab{padding:10px 16px;cursor:pointer;color:var(--text-dim);font-size:12px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+
+/* ── Content area ─────────────────────────────────────────────────────── */
+#content{padding:16px;max-width:1600px;margin:0 auto}
+
+/* ── Cards / Panels ───────────────────────────────────────────────────── */
+.card{background:var(--bg-panel);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden}
+.card-hdr{background:var(--bg-hdr);padding:8px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.card-hdr-title{font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px}
+.card-body{padding:14px}
+
+/* ── Stats grid (overview) ────────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.stat-box{background:var(--bg-hdr);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center}
+.stat-box .val{font-size:24px;font-weight:700;color:var(--orange)}
+.stat-box .lbl{font-size:10px;color:var(--text-dim);margin-top:2px;text-transform:uppercase}
+.stat-box.green .val{color:var(--green)}
+.stat-box.red .val{color:var(--red)}
+.stat-box.blue .val{color:var(--blue)}
+
+/* ── Table ────────────────────────────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--orange);color:#fff;padding:7px 10px;text-align:left;font-weight:700;font-size:11px;white-space:nowrap;cursor:pointer;user-select:none;position:relative}
+th:hover{background:var(--orange-dk)}
+th.sort-asc::after{content:'  ↑';font-size:12px;opacity:.9}
+th.sort-desc::after{content:'  ↓';font-size:12px;opacity:.9}
+th.sort-asc,th.sort-desc{background:var(--orange-dk);box-shadow:inset 0 -2px 0 rgba(255,255,255,.4)}
+td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+tr:nth-child(even) td{background:var(--bg-row)}
+tr:hover td{background:rgba(255,102,0,.08)}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700}
+.tag.ok{background:#1E4C2F;color:var(--green)}
+.tag.err{background:#4C1E1E;color:var(--red)}
+.tag.warn{background:#4C3B1E;color:var(--yellow)}
+.tag.info{background:#1E3A4C;color:var(--blue)}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:var(--radius);border:none;cursor:pointer;font-size:12px;font-weight:600;transition:background .15s}
+.btn-orange{background:var(--orange);color:#fff}.btn-orange:hover{background:var(--orange-dk)}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{background:#922B21}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#1E8449}
+.btn-blue{background:var(--blue);color:#fff}.btn-blue:hover{background:#1A5A7F}
+.btn-ghost{background:var(--bg-hdr);color:var(--text-dim)}.btn-ghost:hover{background:var(--border);color:var(--text)}
+.btn-sm{padding:3px 9px;font-size:11px}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* ── Toolbar row ─────────────────────────────────────────────────────── */
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.search-box{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:var(--radius);font-size:12px;outline:none;width:220px}
+.search-box:focus{border-color:var(--orange)}
+select.filter-sel{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-size:12px;outline:none}
+select.filter-sel:focus{border-color:var(--orange)}
+
+/* ── Modal ────────────────────────────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;width:480px;max-width:96vw;max-height:88vh;overflow-y:auto;border-top:3px solid var(--orange)}
+.modal-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-hdr-title{font-weight:700;color:var(--orange);font-size:13px;text-transform:uppercase}
+.modal-close{background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;line-height:1}.modal-close:hover{color:var(--red)}
+.modal-body{padding:16px}
+.modal-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.restore-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--text-dim);padding:10px 16px;cursor:pointer;font-size:12px;font-weight:600;transition:color .15s}
+.restore-tab:hover{color:var(--text)}
+.restore-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+.restore-tab-content{animation:fade-in .2s ease}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:3px;text-transform:uppercase}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:var(--radius);font-size:12px;outline:none;font-family:inherit}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--orange)}
+.form-row textarea{resize:vertical;min-height:80px}
+.form-row .hint{font-size:10px;color:var(--text-dim);margin-top:2px}
+.form-check{display:flex;align-items:center;gap:8px;cursor:pointer}
+.form-check input[type=checkbox]{width:auto;accent-color:var(--orange)}
+
+/* ── Log view ────────────────────────────────────────────────────────── */
+#log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:11px;font-family:Consolas,monospace;height:320px;overflow-y:auto;line-height:1.7}
+.log-ok{color:var(--green)}.log-err{color:var(--red)}.log-warn{color:var(--yellow)}.log-info{color:var(--blue)}.log-hdr{color:var(--orange);font-weight:700}
+
+/* ── Audit ────────────────────────────────────────────────────────────── */
+.source-app{color:var(--orange)}
+.source-ext{color:var(--red)}
+.source-det{color:var(--yellow)}
+.action-del{color:var(--red)}
+.action-cre{color:var(--green)}
+.action-conn{color:var(--blue)}
+
+/* ── Port scanner ────────────────────────────────────────────────────── */
+.port-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.port-card{background:var(--bg-hdr);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;justify-content:space-between;align-items:center}
+.port-info .port-num{font-size:16px;font-weight:700;color:var(--text)}
+.port-info .port-svc{font-size:10px;color:var(--text-dim)}
+.port-status{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px}
+.port-status.open{background:#1E4C2F;color:var(--green)}
+.port-status.closed{background:#4C1E1E;color:var(--red)}
+
+/* ── Spinner ─────────────────────────────────────────────────────────── */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Pagination ──────────────────────────────────────────────────────── */
+.pagination{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.page-btn{background:var(--bg-hdr);border:1px solid var(--border);color:var(--text-dim);padding:3px 10px;border-radius:var(--radius);cursor:pointer;font-size:11px}
+.page-btn:hover,.page-btn.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+.page-info{font-size:11px;color:var(--text-dim)}
+
+/* ── Node health bars ────────────────────────────────────────────────── */
+.hbar-wrap{background:var(--bg);border-radius:10px;height:8px;overflow:hidden;flex:1}
+.hbar{height:100%;border-radius:10px;background:var(--green);transition:width .4s}
+.hbar.warn{background:var(--yellow)}
+.hbar.crit{background:var(--red)}
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+#toast-wrap{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:999}
+.toast{background:var(--bg-hdr);border-left:4px solid var(--orange);padding:10px 16px;border-radius:var(--radius);font-size:12px;min-width:260px;max-width:380px;animation:slide-in .25s ease;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.toast.ok{border-color:var(--green)}
+.toast.err{border-color:var(--red)}
+@keyframes slide-in{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+
+/* ── Misc ────────────────────────────────────────────────────────────── */
+.sep{border:none;border-top:1px solid var(--border);margin:10px 0}
+.empty-msg{text-align:center;padding:30px;color:var(--text-dim);font-size:12px}
+.danger-zone{border-color:var(--red)}.danger-zone .card-hdr{background:#2A1010}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:10px;font-weight:700;background:var(--bg-hdr);color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
+<div id="topbar">
+<span class="brand">🐇 PuffinMQ</span>
+
+  <div class="conn-field"><label>RabbitMQ Host</label><input id="inp-host" value="" placeholder="loading…" readonly title="Configured in config.json"></div>
+
+  <button id="btn-connect"    onclick="doConnect()">CONNECT</button>
+  <button id="btn-disconnect" onclick="doDisconnect()" disabled>DISCONNECT</button>
+
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Not connected</span>
+
+  <div class="topbar-right">
+    <span class="badge" id="rmq-ver" style="display:none"></span>
+    <span style="font-size:11px;color:var(--text-dim)">v4.0</span>
+  </div>
+</div>
+
+<!-- ── Nav ─────────────────────────────────────────────────────────────────── -->
+<div id="nav">
+  <div class="nav-tab active" data-tab="overview"    onclick="switchTab(this)">📊 Overview</div>
+  <div class="nav-tab"        data-tab="connections" onclick="switchTab(this)">🔗 Connections</div>
+  <div class="nav-tab"        data-tab="channels"    onclick="switchTab(this)">📺 Channels</div>
+  <div class="nav-tab"        data-tab="exchanges"   onclick="switchTab(this)">🔄 Exchanges</div>
+  <div class="nav-tab"        data-tab="queues"      onclick="switchTab(this)">📋 Queues</div>
+  <div class="nav-tab"        data-tab="users"       onclick="switchTab(this)">👥 Users</div>
+  <div class="nav-tab"        data-tab="vhosts"      onclick="switchTab(this)">🏠 Virtual Hosts</div>
+  <div class="nav-tab"        data-tab="policies"    onclick="switchTab(this)">📑 Policies</div>
+  <div class="nav-tab"        data-tab="shovels"     onclick="switchTab(this)">🔌 Shovels</div>
+  <div class="nav-tab"        data-tab="ports"       onclick="switchTab(this)">🔍 Port Scanner</div>
+  <div class="nav-tab"        data-tab="audit"       onclick="switchTab(this)">📜 Audit Log</div>
+</div>
+
+<!-- ── Content ─────────────────────────────────────────────────────────────── -->
+<div id="content">
+
+<!-- ===== OVERVIEW ===================================================== -->
+<div id="tab-overview" class="tab-page">
+  <div class="stats-grid" id="ov-stats"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div class="card">
+      <div class="card-hdr"><span class="card-hdr-title">Message Rates</span></div>
+      <div class="card-body" id="ov-rates"><div class="empty-msg">Connect to view</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="card-hdr-title">Nodes</span></div>
+      <div class="card-body" id="ov-nodes"><div class="empty-msg">Connect to view</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Top Queues by Message Count</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadOverview()">↻ Refresh</button>
+    </div>
+    <div class="card-body tbl-wrap" id="ov-top-queues"><div class="empty-msg">Connect to view</div></div>
+  </div>
+</div>
+
+<!-- ===== CONNECTIONS ================================================== -->
+<div id="tab-connections" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Connections</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-ghost btn-sm" onclick="loadConnections()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="tbl-wrap" id="conn-table"><div class="empty-msg">No data</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHANNELS ===================================================== -->
+<div id="tab-channels" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Channels</span>
+      <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="loadChannels()">↻ Refresh</button>
+    </div>
+    <div class="card-body tbl-wrap" id="chan-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== EXCHANGES ==================================================== -->
+<div id="tab-exchanges" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Exchanges</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="openModal('modal-exchange')">➕ Add Exchange</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadExchanges()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body tbl-wrap" id="exch-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== QUEUES ======================================================= -->
+<div id="tab-queues" class="tab-page" style="display:none">
+  <div class="toolbar">
+    <input class="search-box" id="q-search" placeholder="Filter queues…" oninput="filterQueues()">
+    <button class="btn btn-green btn-sm" onclick="openModal('modal-queue')">➕ Add Queue</button>
+    <button class="btn btn-orange btn-sm" onclick="bulkPurge()">🧹 Purge Selected</button>
+    <button class="btn btn-red btn-sm" onclick="bulkDelete()">🗑 Delete Selected</button>
+    <button class="btn btn-blue btn-sm" onclick="backupSelectedQueues()">💾 Backup Selected</button>
+    <button class="btn btn-blue btn-sm" onclick="openRestoreModal()">📂 Restore Messages</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadQueues()">↻ Refresh</button>
+  </div>
+  <div class="card">
+    <div class="card-body tbl-wrap" id="queue-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== USERS ======================================================== -->
+<div id="tab-users" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Users</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="openModal('modal-user')">➕ Add User</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadUsers()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body tbl-wrap" id="user-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== VHOSTS ======================================================= -->
+<div id="tab-vhosts" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Virtual Hosts</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="openModal('modal-vhost')">➕ Add VHost</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadVhosts()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body tbl-wrap" id="vhost-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== POLICIES ===================================================== -->
+<div id="tab-policies" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Policies</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="openModal('modal-policy')">➕ Add Policy</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadPolicies()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body tbl-wrap" id="policy-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== SHOVELS ====================================================== -->
+<div id="tab-shovels" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Dynamic Shovels</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-green btn-sm" onclick="openModal('modal-shovel')">➕ Add Shovel</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadShovels()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body tbl-wrap" id="shovel-table"><div class="empty-msg">No data</div></div>
+  </div>
+</div>
+
+<!-- ===== PORT SCANNER ================================================= -->
+<div id="tab-ports" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Port Scanner</span>
+      <div class="btn-group" style="margin-left:auto">
+        <input class="search-box" id="port-host-inp" placeholder="hostname / IP" style="width:160px">
+        <button class="btn btn-orange btn-sm" onclick="runPortScan()">🔍 Scan Now</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="port-grid" id="port-grid"><div class="empty-msg">Run a scan to see results</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUDIT LOG ==================================================== -->
+<div id="tab-audit" class="tab-page" style="display:none">
+  <div class="card">
+    <div class="card-hdr">
+      <span class="card-hdr-title">Audit Log</span>
+      <div class="btn-group" style="margin-left:auto">
+        <button class="btn btn-ghost btn-sm" onclick="exportAudit()">⬆ Export CSV</button>
+        <button class="btn btn-red btn-sm" onclick="purgeAudit()">🗑 Purge Old</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="toolbar" style="margin-bottom:10px">
+        <input class="search-box" id="audit-search" placeholder="Search…" oninput="loadAudit()">
+        <select class="filter-sel" id="audit-user"   onchange="loadAudit()"><option value="">All Users</option></select>
+        <select class="filter-sel" id="audit-action" onchange="loadAudit()"><option value="">All Actions</option></select>
+        <select class="filter-sel" id="audit-source" onchange="loadAudit()">
+          <option value="">All Sources</option>
+          <option>PuffinMQ</option>
+          <option>RabbitMQ UI / External</option>
+          <option>External (Detected)</option>
+        </select>
+        <input class="search-box" id="audit-from" type="date" onchange="loadAudit()" style="width:130px">
+        <input class="search-box" id="audit-to"   type="date" onchange="loadAudit()" style="width:130px">
+      </div>
+      <div class="tbl-wrap" id="audit-table"><div class="empty-msg">Loading…</div></div>
+      <div class="pagination" id="audit-pager"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #content -->
+
+<!-- ══ Toast container ═══════════════════════════════════════════════════════ -->
+<div id="toast-wrap"></div>
+
+<!-- ══ MODALS ════════════════════════════════════════════════════════════════ -->
+
+<!-- Create Queue -->
+<div class="modal-overlay" id="modal-queue">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add Queue</span><button class="modal-close" onclick="closeModal('modal-queue')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Queue Name *</label><input id="q-name" placeholder="my-queue"></div>
+      <div class="form-row"><label>Virtual Host</label><input id="q-vhost" value="/"></div>
+      <div class="form-row"><label>Type</label><select id="q-type"><option>classic</option><option>quorum</option><option>stream</option></select></div>
+      <div style="display:flex;gap:16px">
+        <label class="form-check"><input type="checkbox" id="q-durable" checked> Durable</label>
+        <label class="form-check"><input type="checkbox" id="q-autodel"> Auto Delete</label>
+      </div>
+      <div class="form-row" style="margin-top:10px"><label>Arguments (JSON)</label><input id="q-args" value="{}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-queue')">Cancel</button>
+      <button class="btn btn-green" onclick="createQueue()">➕ Create Queue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Exchange -->
+<div class="modal-overlay" id="modal-exchange">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add Exchange</span><button class="modal-close" onclick="closeModal('modal-exchange')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Name *</label><input id="ex-name"></div>
+      <div class="form-row"><label>Type</label><select id="ex-type"><option>direct</option><option>fanout</option><option>topic</option><option>headers</option></select></div>
+      <div class="form-row"><label>Virtual Host</label><input id="ex-vhost" value="/"></div>
+      <div style="display:flex;gap:16px">
+        <label class="form-check"><input type="checkbox" id="ex-durable" checked> Durable</label>
+        <label class="form-check"><input type="checkbox" id="ex-autodel"> Auto Delete</label>
+        <label class="form-check"><input type="checkbox" id="ex-internal"> Internal</label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-exchange')">Cancel</button>
+      <button class="btn btn-green" onclick="createExchange()">➕ Add Exchange</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create User -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add User</span><button class="modal-close" onclick="closeModal('modal-user')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Username *</label><input id="u-name"></div>
+      <div class="form-row"><label>Password *</label><input id="u-pass" type="password"></div>
+      <div class="form-row"><label>Confirm Password</label><input id="u-pass2" type="password"></div>
+      <div class="form-row"><label>Tags (comma-separated)</label><input id="u-tags" placeholder="administrator,monitoring"></div>
+      <div class="form-row"><label>Grant Full Access on VHost</label><input id="u-vhost" value="/"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Cancel</button>
+      <button class="btn btn-green" onclick="createUser()">➕ Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create VHost -->
+<div class="modal-overlay" id="modal-vhost">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add Virtual Host</span><button class="modal-close" onclick="closeModal('modal-vhost')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Virtual Host Name *</label><input id="vh-name" placeholder="/my-vhost"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-vhost')">Cancel</button>
+      <button class="btn btn-green" onclick="createVhost()">➕ Add Virtual Host</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Policy -->
+<div class="modal-overlay" id="modal-policy">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add Policy</span><button class="modal-close" onclick="closeModal('modal-policy')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Virtual Host</label><input id="pol-vhost" value="/"></div>
+      <div class="form-row"><label>Name *</label><input id="pol-name"></div>
+      <div class="form-row"><label>Pattern *</label><input id="pol-pattern" value=".*"></div>
+      <div class="form-row"><label>Apply To</label><select id="pol-apply"><option value="all">All</option><option value="queues">Queues</option><option value="exchanges">Exchanges</option></select></div>
+      <div class="form-row"><label>Priority</label><input id="pol-priority" type="number" value="0"></div>
+      <div class="form-row"><label>Definition (JSON) *</label><textarea id="pol-def" placeholder='{"ha-mode":"all"}'></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-policy')">Cancel</button>
+      <button class="btn btn-green" onclick="createPolicy()">➕ Add Policy</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Messages Modal -->
+<div class="modal-overlay" id="modal-restore">
+  <div class="modal" style="width:580px">
+    <div class="modal-hdr"><span class="modal-hdr-title">Restore Messages</span><button class="modal-close" onclick="closeModal('modal-restore')">✕</button></div>
+    <div style="border-bottom:1px solid var(--border);display:flex;gap:0">
+      <button class="restore-tab active" data-tab="from-file" onclick="switchRestoreTab(this)">📂 From File</button>
+      <button class="restore-tab" data-tab="direct-json" onclick="switchRestoreTab(this)">✏️ Direct JSON</button>
+    </div>
+    <div class="modal-body">
+      <!-- Loading Overlay -->
+      <div id="restore-loading" style="display:none;text-align:center;padding:40px;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);border-radius:var(--radius);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px">
+        <div style="width:50px;height:50px;border:4px solid var(--text-dim);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite"></div>
+        <div style="font-size:14px;color:white">Publishing messages...</div>
+        <div id="restore-progress-text" style="font-size:12px;color:var(--text-dim)"></div>
+      </div>
+      <!-- Tab 1: From File -->
+      <div id="restore-tab-from-file" class="restore-tab-content" style="display:block">
+        <div class="form-row">
+          <label>Select Backup File (JSON)</label>
+          <input type="file" id="restore-file" accept=".json" style="padding:8px;cursor:pointer" onchange="handleRestoreFileUpload(this)">
+        </div>
+        <div class="form-row" style="background:var(--bg);padding:10px;border-radius:var(--radius);border:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:5px">📋 Queue Detection:</div>
+          <div id="restore-file-info" style="font-size:12px;color:var(--text-dim)">No file selected</div>
+        </div>
+        <div class="form-row" style="display:none" id="restore-file-confirm">
+          <label>Target Queue (if different)</label>
+          <select id="restore-file-queue"></select>
+          <div class="hint">Leave empty to use detected queue name</div>
+        </div>
+      </div>
+      <!-- Tab 2: Direct JSON -->
+      <div id="restore-tab-direct-json" class="restore-tab-content" style="display:none">
+        <div class="form-row">
+          <label>Paste JSON Content</label>
+          <textarea id="restore-json-content" placeholder="[{&quot;payload&quot;:&quot;...&quot;},{...}]" style="min-height:200px"></textarea>
+        </div>
+        <div class="form-row">
+          <label>Find & Select Queue *</label>
+          <input id="restore-json-search" placeholder="Search queue name..." style="width:100%;margin-bottom:8px" oninput="filterQueueList()">
+          <select id="restore-json-queue" size="5" style="width:100%"></select>
+          <div class="hint">Type to search, click to select</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="restore-cancel-btn" onclick="closeModal('modal-restore')">Cancel</button>
+      <button class="btn btn-green" id="restore-btn" onclick="publishRestoredMessages()">📤 Publish Messages</button>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+
+<!-- Backup Progress -->
+<div class="modal-overlay" id="modal-backup-progress">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">📊 Backup in Progress</span></div>
+    <div class="modal-body">
+      <div style="text-align: center;">
+        <div style="font-size: 18px; margin: 20px 0; font-weight: bold;" id="backup-status">Initializing backup...</div>
+        <div style="background: #2a2a2a; border: 1px solid #444; border-radius: 4px; padding: 12px; margin: 15px 0;">
+          <div style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Queue Progress:</span>
+              <span id="backup-queue-progress">0/0</span>
+            </div>
+            <div style="background: #1a1a1a; height: 20px; border-radius: 3px; overflow: hidden;">
+              <div id="backup-queue-bar" style="background: linear-gradient(90deg, #4CAF50, #8BC34A); height: 100%; width: 0%; transition: width 0.3s;"></div>
+            </div>
+          </div>
+          <div style="margin-top: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span>Messages:</span>
+              <span id="backup-message-count">0</span>
+            </div>
+            <div style="color: #999; font-size: 13px; margin-top: 8px;">
+              Current Queue: <span id="backup-current-queue">--</span>
+            </div>
+          </div>
+        </div>
+        <div style="color: #999; font-size: 12px; margin-top: 10px; min-height: 20px;" id="backup-detail"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="backup-footer" style="display: none;">
+      <button class="btn btn-green" onclick="downloadBackup()">📥 Download Backup</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-backup-progress')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Shovel -->
+<div class="modal-overlay" id="modal-shovel">
+  <div class="modal">
+    <div class="modal-hdr"><span class="modal-hdr-title">Add Shovel</span><button class="modal-close" onclick="closeModal('modal-shovel')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Name *</label><input id="sh-name"></div>
+      <div class="form-row"><label>Virtual Host</label><input id="sh-vhost" value="/"></div>
+      <hr class="sep">
+      <div class="form-row"><label>Source URI *</label><input id="sh-src-uri" value="amqp://"></div>
+      <div class="form-row"><label>Source Queue</label><input id="sh-src-q"></div>
+      <hr class="sep">
+      <div class="form-row"><label>Destination URI *</label><input id="sh-dst-uri" value="amqp://"></div>
+      <div class="form-row"><label>Destination Queue</label><input id="sh-dst-q"></div>
+      <hr class="sep">
+      <div class="form-row"><label>Ack Mode</label><select id="sh-ack"><option>on-confirm</option><option>on-publish</option><option>no-ack</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-shovel')">Cancel</button>
+      <button class="btn btn-green" onclick="createShovel()">➕ Add Shovel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Messages -->
+<div class="modal-overlay" id="modal-messages">
+  <div class="modal" style="width:680px">
+    <div class="modal-hdr"><span class="modal-hdr-title" id="msg-modal-title">Messages</span><button class="modal-close" onclick="closeModal('modal-messages')">✕</button></div>
+    <div class="modal-body">
+      <div id="msg-list" style="font-family:Consolas,monospace;font-size:11px;max-height:400px;overflow-y:auto;background:var(--bg);padding:10px;border-radius:4px;border:1px solid var(--border)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="exportMessagesToBackup()">💾 Backup</button>
+      <button class="btn btn-ghost btn-sm" onclick="showRestoreModal()">📂 Restore</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-messages')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore Messages Modal -->
+<div class="modal-overlay" id="modal-restore">
+  <div class="modal" style="width:600px">
+    <div class="modal-hdr"><span class="modal-hdr-title">Restore Messages from Backup</span><button class="modal-close" onclick="closeModal('modal-restore')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row" style="margin-bottom:10px">
+        <label style="display:block;margin-bottom:8px;font-weight:600;color:var(--text)">Select a backup file (.json or .csv)</label>
+        <input type="file" id="restore-file-input" accept=".json,.csv" style="padding:8px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);width:100%;font-size:12px">
+      </div>
+      <div style="margin-top:10px;padding:10px;background:var(--bg);border-left:3px solid var(--blue);border-radius:var(--radius);font-size:11px;color:var(--text-dim)">
+        <strong>ℹ️ Instructions:</strong> Click above to select a backup file previously downloaded. The messages will be re-published to the selected queue.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-blue" onclick="restoreMessagesFromBackup()">Restore</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-restore')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ State ════════════════════════════════════════════════════════════════════
+const S = {
+  connected: false,
+  queues: [],
+  auditPage: 0,
+  auditPageSize: 50,
+  auditTotal: 0,
+  auditSortBy: 'timestamp',
+  auditSortDir: 'desc',
+  autoRefreshTimer: null,
+
+  // Global sort state (client-side)
+  // Used to apply ORDER BY-like behavior to pages that render tables from /api responses.
+  sort: {
+    activeFields: null, // array of fieldKeys aligned with current rendered table columns
+    currentPage: null,  // one of: connections/channels/exchanges/queues/users/vhosts/policies/shovels
+
+    connections: { by: 'name', dir: 'asc' },
+    channels:    { by: 'name', dir: 'asc' },
+    exchanges:   { by: 'name', dir: 'asc' },
+    queues:      { by: 'name', dir: 'asc' },
+    users:       { by: 'name', dir: 'asc' },
+    vhosts:      { by: 'name', dir: 'asc' },
+    policies:    { by: 'name', dir: 'asc' },
+    shovels:     { by: 'name', dir: 'asc' },
+  },
+
+  // Data caches — populated on load, re-used by pageSort (no re-fetch on sort)
+  cache: {
+    connections: [], channels: [], exchanges: [],
+    users: [], userPermMap: {}, vhosts: [], policies: [], shovels: []
+  }
+};
+
+
+
+
+// ══ Tab switching ════════════════════════════════════════════════════════════
+function switchTab(el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-page').forEach(p => p.style.display = 'none');
+  el.classList.add('active');
+  const tab = el.dataset.tab;
+  document.getElementById('tab-' + tab).style.display = '';
+  // Load data for tab
+  const loaders = {
+    overview: loadOverview, connections: loadConnections, channels: loadChannels,
+    exchanges: loadExchanges, queues: loadQueues, users: loadUsers,
+    vhosts: loadVhosts, policies: loadPolicies, shovels: loadShovels,
+    ports: () => {}, audit: () => { loadAuditFilters(); loadAudit(); }
+  };
+  if (loaders[tab] && S.connected) loaders[tab]();
+  if (tab === 'audit') { loadAuditFilters(); loadAudit(); }
+}
+
+// ══ Modal helpers ═════════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+
+// ══ Toast ════════════════════════════════════════════════════════════════════
+function toast(msg, type='ok', dur=3500) {
+  const w = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  w.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s';
+    setTimeout(() => t.remove(), 400); }, dur);
+}
+
+// ══ API helpers ═══════════════════════════════════════════════════════════════
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api' + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+  return data;
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString();
+}
+function fmtRate(r) { return r != null ? Number(r).toFixed(2) + '/s' : '—'; }
+
+// ══ Connection ════════════════════════════════════════════════════════════════
+async function doConnect() {
+  const btn = document.getElementById('btn-connect');
+  btn.textContent = '…';
+  btn.disabled = true;
+  try {
+    // Credentials live in config.json on the server — nothing sensitive is sent from the UI.
+    const data = await api('POST', '/connect', {});
+    S.connected = true;
+    setConnected(true, data);
+    loadOverview();
+    toast('Connected to RabbitMQ ✓', 'ok');
+    startAutoRefresh();
+  } catch(e) {
+    toast('Connection failed: ' + e.message, 'err', 5000);
+    setConnected(false, null);
+  } finally {
+    btn.textContent = 'CONNECT';
+    btn.disabled = false;
+  }
+}
+
+async function doDisconnect() {
+  await api('POST', '/disconnect').catch(() => {});
+  S.connected = false;
+  setConnected(false, null);
+  stopAutoRefresh();
+  toast('Disconnected', 'warn');
+}
+
+function setConnected(ok, data) {
+  const dot  = document.getElementById('status-dot');
+  const txt  = document.getElementById('status-text');
+  const ver  = document.getElementById('rmq-ver');
+  const btnC = document.getElementById('btn-connect');
+  const btnD = document.getElementById('btn-disconnect');
+
+  if (ok && data) {
+    dot.className  = 'status-dot ok';
+    const ov       = data.overview || {};
+    const rmqVer   = ov.rabbitmq_version || ov.product_version || '';
+    const erlang   = ov.erlang_version   || '';
+    txt.textContent = `Connected — RabbitMQ ${rmqVer}  Erlang ${erlang}  (${data.host})`;
+    ver.textContent = rmqVer;
+    ver.style.display = '';
+    btnC.disabled  = true;
+    btnD.disabled  = false;
+  } else {
+    dot.className   = 'status-dot';
+    txt.textContent = 'Not connected';
+    ver.style.display = 'none';
+    btnC.disabled   = false;
+    btnD.disabled   = true;
+  }
+}
+
+// ══ Auto-refresh ══════════════════════════════════════════════════════════════
+function startAutoRefresh() {
+  stopAutoRefresh();
+  S.autoRefreshTimer = setInterval(() => {
+    const activeTab = document.querySelector('.nav-tab.active')?.dataset?.tab;
+    if (activeTab === 'overview')   loadOverview();
+    if (activeTab === 'queues')     loadQueues();
+    if (activeTab === 'audit')      loadAudit();
+  }, 30000);
+}
+function stopAutoRefresh() {
+  if (S.autoRefreshTimer) clearInterval(S.autoRefreshTimer);
+}
+
+// ══ Overview ══════════════════════════════════════════════════════════════════
+async function loadOverview() {
+  if (!S.connected) return;
+  try {
+    const [ov, nodes] = await Promise.all([
+      api('GET', '/overview'),
+      api('GET', '/nodes'),
+    ]);
+    renderOverview(ov, nodes);
+  } catch(e) { toast('Overview error: ' + e.message, 'err'); }
+}
+
+function renderOverview(ov, nodes) {
+  const qt = ov.queue_totals  || {};
+  const ot = ov.object_totals || {};
+  const ms = ov.message_stats || {};
+
+  // Stats boxes
+  const stats = [
+    { lbl:'Connections',  val: fmtNum(ot.connections),  cls:'blue' },
+    { lbl:'Channels',     val: fmtNum(ot.channels),     cls:''     },
+    { lbl:'Exchanges',    val: fmtNum(ot.exchanges),     cls:''     },
+    { lbl:'Queues',       val: fmtNum(ot.queues),        cls:''     },
+    { lbl:'Consumers',    val: fmtNum(ot.consumers),     cls:''     },
+    { lbl:'Msgs Ready',   val: fmtNum(qt.messages_ready), cls:'green'},
+    { lbl:'Msgs Unacked', val: fmtNum(qt.messages_unacknowledged), cls:'warn' },
+    { lbl:'Msgs Total',   val: fmtNum(qt.messages),      cls:''     },
+  ];
+  document.getElementById('ov-stats').innerHTML = stats.map(s =>
+    `<div class="stat-box ${s.cls}"><div class="val">${s.val}</div><div class="lbl">${s.lbl}</div></div>`
+  ).join('');
+
+  // Message rates
+  const rates = [
+    ['Publish',        ms.publish_details?.rate,         ms.publish],
+    ['Deliver/Get',    ms.deliver_get_details?.rate,      ms.deliver_get],
+    ['Acknowledge',    ms.ack_details?.rate,              ms.ack],
+    ['Redeliver',      ms.redeliver_details?.rate,        ms.redeliver],
+  ];
+  document.getElementById('ov-rates').innerHTML = rates.map(([lbl, rate, total]) =>
+    `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--text-dim)">${lbl}</span>
+      <span><b style="color:var(--orange)">${fmtRate(rate)}</b>
+        <span style="color:var(--text-dim);font-size:10px;margin-left:8px">total: ${fmtNum(total)}</span>
+      </span>
+    </div>`
+  ).join('');
+
+  // Nodes
+  document.getElementById('ov-nodes').innerHTML = (nodes||[]).map(n => {
+    const memPct = n.mem_limit > 0 ? Math.round(n.mem_used / n.mem_limit * 100) : 0;
+    const memCls = memPct > 80 ? 'crit' : memPct > 60 ? 'warn' : '';
+    const fdPct  = n.fd_total > 0 ? Math.round(n.fd_used / n.fd_total * 100) : 0;
+    return `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <b style="color:var(--orange)">${n.name}</b>
+        <span class="tag ${n.running ? 'ok' : 'err'}">${n.running ? 'running' : 'stopped'}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:11px">
+        <span style="color:var(--text-dim);width:60px">Memory</span>
+        <div class="hbar-wrap"><div class="hbar ${memCls}" style="width:${memPct}%"></div></div>
+        <span>${memPct}%</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+        <span style="color:var(--text-dim);width:60px">FD</span>
+        <div class="hbar-wrap"><div class="hbar" style="width:${fdPct}%"></div></div>
+        <span>${n.fd_used||0}/${n.fd_total||0}</span>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-msg">No node data</div>';
+
+  // Top queues
+  api('GET', '/queues').then(queues => {
+    const top = [...queues].sort((a,b) => (b.messages||0)-(a.messages||0)).slice(0,10);
+    document.getElementById('ov-top-queues').innerHTML = renderTable(
+      ['Name','VHost','State','Ready','Unacked','Total'],
+      top.map(q => [q.name, q.vhost, q.state,
+        fmtNum(q.messages_ready), fmtNum(q.messages_unacknowledged), fmtNum(q.messages)]),
+      null,
+      ['name','vhost','state','messages_ready','messages_unacknowledged','messages']
+    );
+  }).catch(() => {});
+}
+
+// ══ Generic helpers ═══════════════════════════════════════════════════════════
+function toSortable(v) {
+  if (v == null) return '';
+  if (typeof v === 'number') return v;
+  const s = String(v);
+  const n = Number(s);
+  if (s.trim() !== '' && !Number.isNaN(n) && s.trim() === String(n)) return n;
+  return s.toLowerCase();
+}
+
+function sortRows(arr, by, dir) {
+  const d = (dir || 'asc').toLowerCase();
+  const asc = d !== 'desc';
+  const out = [...arr];
+  out.sort((a, b) => {
+    const av = toSortable(a?.[by]);
+    const bv = toSortable(b?.[by]);
+    if (av < bv) return asc ? -1 : 1;
+    if (av > bv) return asc ? 1 : -1;
+    return 0;
+  });
+  return out;
+}
+
+// ══ Generic table renderer ════════════════════════════════════════════════════
+function renderTable(cols, rows, actions, colKeys = null) {
+  if (!rows.length) return '<div class="empty-msg">No items</div>';
+  return `<table>
+    <thead><tr>${cols.map((c, idx) => {
+      // Sorting is triggered on DOUBLE-CLICK to match RabbitMQ UI behavior.
+      // Prefer explicit colKeys to avoid index/order mismatches.
+      const field = (colKeys && colKeys[idx])
+        ? colKeys[idx]
+        : (S.sort?.activeFields?.[idx] ?? null);
+      const clickable = field != null;
+      // Determine sort arrow class for the active sorted column.
+      let sortCls = '';
+      if (field && S.sort.currentPage) {
+        const _st = S.sort[S.sort.currentPage];
+        if (_st && _st.by === field) sortCls = _st.dir === 'desc' ? ' sort-desc' : ' sort-asc';
+      }
+      // Use ondblclick so single-click doesn't toggle unexpectedly (mirrors RabbitMQ UI).
+      return `<th class="${sortCls.trim()}"${clickable ? ` ondblclick="pageSort(${JSON.stringify(field)}, ${idx})"` : ''}}>${c}</th>`;
+    }).join('')}${actions?'<th>Actions</th>':''}</tr></thead>
+    <tbody>${rows.map((row,i) =>
+      `<tr>${row.map(cell => `<td title="${cell||''}">${cell??'—'}</td>`).join('')}
+      ${actions ? `<td>${actions(i)}</td>` : ''}</tr>`
+    ).join('')}</tbody>
+  </table>`;
+}
+
+
+
+// ══ Connections ═══════════════════════════════════════════════════════════════
+async function loadConnections() {
+  if (!S.connected) return;
+  try {
+    S.cache.connections = await api('GET', '/connections');
+    S.sort.currentPage = 'connections';
+    renderConnections();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderConnections() {
+  S.sort.currentPage = 'connections';
+  S.sort.activeFields = ['name','user','state','protocol','channels','ssl','peer_port'];
+  const sorted = sortRows(S.cache.connections, S.sort.connections.by, S.sort.connections.dir);
+  document.getElementById('conn-table').innerHTML = renderTable(
+    ['Name','User','State','Protocol','Channels','SSL','Peer Port'],
+    sorted.map(c => [c.name, c.user, c.state, c.protocol,
+      c.channels, c.ssl?'Yes':'No', c.peer_port]),
+    (i) => `<button class="btn btn-red btn-sm"
+      onclick="closeConn('${encodeURIComponent(sorted[i].name)}')">✕ Close</button>`
+  );
+}
+
+
+
+async function closeConn(name) {
+  if (!confirm('Close this connection?')) return;
+  try {
+    await api('DELETE', '/connections/close?name=' + name);
+    toast('Connection closed', 'ok');
+    loadConnections();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Channels ══════════════════════════════════════════════════════════════════
+async function loadChannels() {
+  if (!S.connected) return;
+  try {
+    S.cache.channels = await api('GET', '/channels');
+    S.sort.currentPage = 'channels';
+    renderChannels();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderChannels() {
+  S.sort.currentPage = 'channels';
+  S.sort.activeFields = ['name','user','consumer_count','prefetch_count','messages_unacknowledged'];
+  const sorted = sortRows(S.cache.channels, S.sort.channels.by, S.sort.channels.dir);
+  document.getElementById('chan-table').innerHTML = renderTable(
+    ['Name','User','Consumers','Prefetch','Unacked'],
+    sorted.map(c => [c.name, c.user, c.consumer_count, c.prefetch_count, c.messages_unacknowledged]),
+    null,
+    S.sort.activeFields
+  );
+}
+
+
+
+// ══ Exchanges ════════════════════════════════════════════════════════════════
+async function loadExchanges() {
+  if (!S.connected) return;
+  try {
+    S.cache.exchanges = await api('GET', '/exchanges');
+    S.sort.currentPage = 'exchanges';
+    renderExchanges();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderExchanges() {
+  S.sort.currentPage = 'exchanges';
+  S.sort.activeFields = ['name','type','vhost','durable','auto_delete','internal'];
+  const exs = S.cache.exchanges;
+  const sorted = sortRows(exs, S.sort.exchanges.by, S.sort.exchanges.dir);
+  document.getElementById('exch-table').innerHTML = renderTable(
+    ['Name','Type','VHost','Durable','Auto Delete','Internal'],
+    sorted.map(e => [e.name||'(default)',e.type,e.vhost,
+      e.durable?'Yes':'No', e.auto_delete?'Yes':'No', e.internal?'Yes':'No']),
+    (i) => sorted[i].name && !sorted[i].name.startsWith('amq.')
+      ? `<button class="btn btn-red btn-sm"
+          onclick="deleteExchange('${encodeURIComponent(sorted[i].vhost)}','${encodeURIComponent(sorted[i].name)}')">🗑</button>`
+      : '',
+    S.sort.activeFields
+  );
+}
+
+
+
+async function createExchange() {
+  try {
+    await api('POST', '/exchanges', {
+      name: document.getElementById('ex-name').value,
+      vhost: document.getElementById('ex-vhost').value,
+      type: document.getElementById('ex-type').value,
+      durable: document.getElementById('ex-durable').checked,
+      auto_delete: document.getElementById('ex-autodel').checked,
+      internal: document.getElementById('ex-internal').checked,
+      arguments: {}
+    });
+    closeModal('modal-exchange');
+    toast('Exchange created ✓', 'ok');
+    loadExchanges();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteExchange(vhost, name) {
+  if (!confirm(`Delete exchange "${decodeURIComponent(name)}"?`)) return;
+  try {
+    await api('DELETE', `/exchanges/delete?vhost=${vhost}&name=${name}`);
+    toast('Exchange deleted', 'ok');
+    loadExchanges();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Queues ════════════════════════════════════════════════════════════════════
+async function loadQueues() {
+  if (!S.connected) return;
+  try {
+    S.queues = await api('GET', '/queues');
+    S.sort.currentPage = 'queues';
+    renderQueuesSorted();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderQueuesSorted() {
+  S.sort.currentPage = 'queues';
+  const kw = (document.getElementById('q-search')?.value || '').toLowerCase();
+  let data = kw ? S.queues.filter(q => q.name.toLowerCase().includes(kw)) : S.queues;
+  const sorted = sortRows(data, S.sort.queues.by, S.sort.queues.dir);
+  renderQueues(sorted);
+}
+
+
+
+function filterQueues() { renderQueuesSorted(); }
+
+function _qSortCls(field) {
+  const st = S.sort.queues;
+  if (st.by === field) return st.dir === 'desc' ? ' sort-desc' : ' sort-asc';
+  return '';
+}
+
+function renderQueues(queues) {
+  const el = document.getElementById('queue-table');
+  if (!queues.length) { el.innerHTML = '<div class="empty-msg">No queues</div>'; return; }
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th><input type="checkbox" id="q-chk-all" onchange="toggleAllQueues(this)"></th>
+      <th class="${_qSortCls('name')}"           ondblclick="pageSort('name',1)">Name</th>
+      <th class="${_qSortCls('type')}"           ondblclick="pageSort('type',2)">Type</th>
+      <th class="${_qSortCls('state')}"          ondblclick="pageSort('state',3)">State</th>
+      <th class="${_qSortCls('vhost')}"          ondblclick="pageSort('vhost',4)">VHost</th>
+      <th class="${_qSortCls('messages_ready')}" ondblclick="pageSort('messages_ready',5)">Ready</th>
+      <th class="${_qSortCls('messages_unacknowledged')}" ondblclick="pageSort('messages_unacknowledged',6)">Unacked</th>
+      <th class="${_qSortCls('messages')}"       ondblclick="pageSort('messages',7)">Total</th>
+      <th>Actions</th>
+    </tr></thead>
+    <tbody>${queues.map((q,i) => `
+      <tr>
+        <td><input type="checkbox" class="q-chk" data-vhost="${encodeURIComponent(q.vhost)}" data-name="${encodeURIComponent(q.name)}"></td>
+        <td><b>${q.name}</b></td>
+        <td><span class="pill">${q.type||'classic'}</span></td>
+        <td><span class="tag ${q.state==='running'?'ok':'warn'}">${q.state}</span></td>
+        <td>${q.vhost}</td>
+        <td style="color:var(--green)">${fmtNum(q.messages_ready)}</td>
+        <td style="color:var(--yellow)">${fmtNum(q.messages_unacknowledged)}</td>
+        <td style="color:var(--orange);font-weight:700">${fmtNum(q.messages)}</td>
+        <td>
+          <div class="btn-group">
+            <button class="btn btn-ghost btn-sm"
+              onclick="previewMessages('${encodeURIComponent(q.vhost)}','${encodeURIComponent(q.name)}')">👁 View</button>
+            <button class="btn btn-orange btn-sm"
+              onclick="purgeOne('${encodeURIComponent(q.vhost)}','${encodeURIComponent(q.name)}')">🧹 Purge</button>
+            <button class="btn btn-red btn-sm"
+              onclick="deleteOne('${encodeURIComponent(q.vhost)}','${encodeURIComponent(q.name)}')">🗑</button>
+          </div>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function toggleAllQueues(chk) {
+  document.querySelectorAll('.q-chk').forEach(c => c.checked = chk.checked);
+}
+
+function getSelectedQueues() {
+  return [...document.querySelectorAll('.q-chk:checked')]
+    .map(c => {
+      const vhost = decodeURIComponent(c.dataset.vhost);
+      const name = decodeURIComponent(c.dataset.name);
+      return S.queues.find(q => q.vhost === vhost && q.name === name);
+    })
+    .filter(Boolean);
+}
+
+async function createQueue() {
+  try {
+    let args = {};
+    try { args = JSON.parse(document.getElementById('q-args').value || '{}'); } catch(e) {}
+    await api('POST', '/queues', {
+      name: document.getElementById('q-name').value,
+      vhost: document.getElementById('q-vhost').value,
+      durable: document.getElementById('q-durable').checked,
+      auto_delete: document.getElementById('q-autodel').checked,
+      arguments: args
+    });
+    closeModal('modal-queue');
+    toast('Queue created ✓', 'ok');
+    loadQueues();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function purgeOne(vhost, name) {
+  if (!confirm(`Purge all messages from "${decodeURIComponent(name)}"?`)) return;
+  try {
+    await api('DELETE', `/queues/purge?vhost=${vhost}&name=${name}`);
+    toast('Queue purged ✓', 'ok');
+    loadQueues();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteOne(vhost, name) {
+  if (!confirm(`Delete queue "${decodeURIComponent(name)}"?`)) return;
+  try {
+    await api('DELETE', `/queues/delete?vhost=${vhost}&name=${name}`);
+    toast('Queue deleted ✓', 'ok');
+    loadQueues();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function bulkPurge() {
+  const sel = getSelectedQueues();
+  if (!sel.length) { toast('Select queues first', 'warn'); return; }
+  if (!confirm(`Purge ${sel.length} queue(s)?`)) return;
+  const r = await api('POST', '/queues/bulk-purge', { queues: sel });
+  toast(`Purged ${r.purged} queue(s)`, 'ok');
+  loadQueues();
+}
+
+async function bulkDelete() {
+  const sel = getSelectedQueues();
+  if (!sel.length) { toast('Select queues first', 'warn'); return; }
+  if (!confirm(`Delete ${sel.length} queue(s)?`)) return;
+  const r = await api('POST', '/queues/bulk-delete', { queues: sel });
+  toast(`Deleted ${r.deleted} queue(s)`, 'ok');
+  loadQueues();
+}
+
+async function previewMessages(vhost, name) {
+  document.getElementById('msg-modal-title').textContent = 'Messages — ' + decodeURIComponent(name);
+  document.getElementById('msg-list').innerHTML = '<div class="spinner"></div>';
+  openModal('modal-messages');
+  try {
+    const msgs = await api('GET', `/queues/messages?vhost=${vhost}&name=${name}&count=20`);
+    if (!msgs.length) {
+      document.getElementById('msg-list').innerHTML = '<div class="empty-msg">No messages</div>';
+      return;
+    }
+    document.getElementById('msg-list').innerHTML = msgs.map((m,i) =>
+      `<div style="padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text-dim)">[${i+1}]</span>
+        <span style="color:var(--text);margin-left:6px">${m.payload||''}</span>
+      </div>`
+    ).join('');
+  } catch(e) {
+    document.getElementById('msg-list').innerHTML = `<div class="log-err">${e.message}</div>`;
+  }
+  // Store current queue info for backup/restore
+  window._currentQueue = { vhost, name };
+}
+
+async function exportMessagesToBackup() {
+  if (!window._currentQueue) { toast('No queue selected', 'err'); return; }
+  const { vhost, name } = window._currentQueue;
+  try {
+    // Backup endpoint returns a downloadable file (not JSON)
+    const response = await fetch(
+      `/api/queues/backup?vhost=${encodeURIComponent(vhost)}&name=${encodeURIComponent(name)}&count=10000&format=json`,
+      { method: 'POST' }
+    );
+
+    if (!response.ok) {
+      let errMsg = 'Backup failed';
+      try {
+        const data = await response.json();
+        errMsg = data.error || errMsg;
+      } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = 'messages.json';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename=([^;]+)/);
+      if (match) filename = match[1].replace(/"/g, '');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    toast(`Downloaded: ${filename}`, 'ok');
+    closeModal('modal-messages');
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+
+async function showRestoreModal() {
+  openModal('modal-restore');
+}
+
+async function restoreMessagesFromBackup() {
+  if (!window._currentQueue) { toast('No queue selected', 'err'); return; }
+  
+  const fileInput = document.getElementById('restore-file-input');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    toast('Select a backup file', 'warn'); 
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  const { vhost, name } = window._currentQueue;
+  
+  try {
+    if (!confirm(`Restore messages from ${file.name}?`)) return;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`/api/queues/restore?vhost=${encodeURIComponent(vhost)}&name=${encodeURIComponent(name)}`, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error || 'Restore failed');
+    toast(`Restored ${data.published}/${data.total} messages`, 'ok');
+    closeModal('modal-restore');
+    closeModal('modal-messages');
+    fileInput.value = ''; // Reset file input
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Users ════════════════════════════════════════════════════════════════════
+async function loadUsers() {
+  if (!S.connected) return;
+  try {
+    const [users, perms] = await Promise.all([api('GET', '/users'), api('GET', '/permissions')]);
+    S.cache.users = users;
+    S.cache.userPermMap = {};
+    perms.forEach(p => { S.cache.userPermMap[p.user] = S.cache.userPermMap[p.user] || []; S.cache.userPermMap[p.user].push(p.vhost); });
+    S.sort.currentPage = 'users';
+    renderUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderUsers() {
+  S.sort.currentPage = 'users';
+  S.sort.activeFields = ['name','tags','_vhosts','password_hash'];
+  const sorted = sortRows(S.cache.users, S.sort.users.by, S.sort.users.dir);
+  document.getElementById('user-table').innerHTML = renderTable(
+    ['Username','Tags','VHosts','Has Password'],
+    sorted.map(u => [u.name,
+      Array.isArray(u.tags) ? u.tags.join(', ') : (u.tags||''),
+      (S.cache.userPermMap[u.name]||[]).join(', ') || '—',
+      u.password_hash ? 'Yes' : 'No']),
+    (i) => `<button class="btn btn-red btn-sm"
+      onclick="deleteUser('${encodeURIComponent(sorted[i].name)}','${sorted[i].name}')">🗑</button>`,
+    S.sort.activeFields
+  );
+}
+
+async function createUser() {
+  const pass  = document.getElementById('u-pass').value;
+  const pass2 = document.getElementById('u-pass2').value;
+  if (pass !== pass2) { toast('Passwords do not match', 'err'); return; }
+  try {
+    const vhost = document.getElementById('u-vhost').value;
+    await api('POST', '/users', {
+      username: document.getElementById('u-name').value,
+      password: pass,
+      tags: document.getElementById('u-tags').value,
+      permissions: vhost ? [{ vhost, configure:'.*', write:'.*', read:'.*' }] : []
+    });
+    closeModal('modal-user');
+    toast('User created ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteUser(enc, name) {
+  if (!confirm(`Delete user "${name}"?`)) return;
+  try {
+    await api('DELETE', '/users/delete?name=' + enc);
+    toast('User deleted ✓', 'ok');
+    loadUsers();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ VHosts ════════════════════════════════════════════════════════════════════
+async function loadVhosts() {
+  if (!S.connected) return;
+  try {
+    S.cache.vhosts = await api('GET', '/vhosts');
+    S.sort.currentPage = 'vhosts';
+    renderVhosts();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderVhosts() {
+  S.sort.currentPage = 'vhosts';
+  S.sort.activeFields = ['name','description','messages','tracing'];
+  const sorted = sortRows(S.cache.vhosts, S.sort.vhosts.by, S.sort.vhosts.dir);
+  document.getElementById('vhost-table').innerHTML = renderTable(
+    ['Name','Description','Messages','Tracing'],
+    sorted.map(v => [v.name, v.description||'', fmtNum(v.messages), v.tracing?'Yes':'No']),
+    (i) => sorted[i].name !== '/'
+      ? `<button class="btn btn-red btn-sm"
+          onclick="deleteVhost('${encodeURIComponent(sorted[i].name)}','${sorted[i].name}')">🗑</button>`
+      : '',
+    S.sort.activeFields
+  );
+}
+
+async function createVhost() {
+  const name = document.getElementById('vh-name').value.trim();
+  if (!name) { toast('Name required', 'err'); return; }
+  try {
+    await api('POST', '/vhosts', { name });
+    closeModal('modal-vhost');
+    toast('Virtual host created ✓', 'ok');
+    loadVhosts();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deleteVhost(enc, name) {
+  if (!confirm(`Delete virtual host "${name}" and ALL its resources?`)) return;
+  try {
+    await api('DELETE', '/vhosts/delete?name=' + enc);
+    toast('VHost deleted ✓', 'ok');
+    loadVhosts();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Policies ══════════════════════════════════════════════════════════════════
+async function loadPolicies() {
+  if (!S.connected) return;
+  try {
+    S.cache.policies = await api('GET', '/policies');
+    S.sort.currentPage = 'policies';
+    renderPolicies();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderPolicies() {
+  S.sort.currentPage = 'policies';
+  S.sort.activeFields = ['name','vhost','pattern','apply-to','priority','definition'];
+  const sorted = sortRows(S.cache.policies, S.sort.policies.by, S.sort.policies.dir);
+  document.getElementById('policy-table').innerHTML = renderTable(
+    ['Name','VHost','Pattern','Apply To','Priority','Definition'],
+    sorted.map(p => [p.name, p.vhost, p.pattern, p['apply-to']||'all',
+      p.priority, JSON.stringify(p.definition)]),
+    (i) => `<button class="btn btn-red btn-sm"
+      onclick="deletePolicy('${encodeURIComponent(sorted[i].vhost)}','${encodeURIComponent(sorted[i].name)}')">🗑</button>`,
+    S.sort.activeFields
+  );
+}
+
+async function createPolicy() {
+  let def = {};
+  try { def = JSON.parse(document.getElementById('pol-def').value || '{}'); }
+  catch(e) { toast('Invalid JSON in definition', 'err'); return; }
+  try {
+    await api('POST', '/policies', {
+      vhost:      document.getElementById('pol-vhost').value,
+      name:       document.getElementById('pol-name').value,
+      pattern:    document.getElementById('pol-pattern').value,
+      'apply-to': document.getElementById('pol-apply').value,
+      priority:   parseInt(document.getElementById('pol-priority').value)||0,
+      definition: def
+    });
+    closeModal('modal-policy');
+    toast('Policy created ✓', 'ok');
+    loadPolicies();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+async function deletePolicy(vhost, name) {
+  if (!confirm(`Delete policy "${decodeURIComponent(name)}"?`)) return;
+  try {
+    await api('DELETE', `/policies/delete?vhost=${vhost}&name=${name}`);
+    toast('Policy deleted ✓', 'ok');
+    loadPolicies();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Shovels ═══════════════════════════════════════════════════════════════════
+async function loadShovels() {
+  if (!S.connected) return;
+  try {
+    S.cache.shovels = await api('GET', '/shovels');
+    S.sort.currentPage = 'shovels';
+    renderShovels();
+  } catch(e) { toast(e.message, 'err'); }
+}
+function renderShovels() {
+  S.sort.currentPage = 'shovels';
+  S.sort.activeFields = ['name','vhost','_src_uri','_src_queue','_dst_uri','_dst_queue'];
+  const sorted = sortRows(S.cache.shovels, S.sort.shovels.by, S.sort.shovels.dir);
+  document.getElementById('shovel-table').innerHTML = renderTable(
+    ['Name','VHost','Src URI','Src Queue','Dst URI','Dst Queue'],
+    sorted.map(s => {
+      const v = s.value || {};
+      return [s.name, s.vhost,
+        (v['src-uri']||'').substring(0,40),   v['src-queue']||'',
+        (v['dest-uri']||'').substring(0,40),  v['dest-queue']||''];
+    }),
+    null,
+    S.sort.activeFields
+  );
+}
+
+async function createShovel() {
+  try {
+    await api('POST', '/shovels', {
+      name:  document.getElementById('sh-name').value,
+      vhost: document.getElementById('sh-vhost').value,
+      value: {
+        'src-uri':    document.getElementById('sh-src-uri').value,
+        'src-queue':  document.getElementById('sh-src-q').value,
+        'dest-uri':   document.getElementById('sh-dst-uri').value,
+        'dest-queue': document.getElementById('sh-dst-q').value,
+        'ack-mode':   document.getElementById('sh-ack').value,
+      }
+    });
+    closeModal('modal-shovel');
+    toast('Shovel created ✓', 'ok');
+    loadShovels();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Port Scanner ══════════════════════════════════════════════════════════════
+async function runPortScan() {
+  const host = document.getElementById('port-host-inp').value ||
+               document.getElementById('inp-host').value || 'localhost';
+  document.getElementById('port-grid').innerHTML = '<div class="spinner"></div>';
+  try {
+    const results = await api('POST', '/ports/scan', { host });
+    renderPorts(results);
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function renderPorts(results) {
+  if (!results.length) {
+    document.getElementById('port-grid').innerHTML = '<div class="empty-msg">No results</div>';
+    return;
+  }
+  document.getElementById('port-grid').innerHTML = results.map(r => `
+    <div class="port-card">
+      <div class="port-info">
+        <div class="port-num">${r.port}</div>
+        <div class="port-svc">${r.service}</div>
+        ${r.latency ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">${r.latency}ms</div>` : ''}
+      </div>
+      <span class="port-status ${r.open?'open':'closed'}">${r.open ? '● OPEN' : '○ CLOSED'}</span>
+    </div>`
+  ).join('');
+}
+
+// ══ Audit Log ════════════════════════════════════════════════════════════════
+async function loadAuditFilters() {
+  try {
+    const f = await api('GET', '/audit/filters');
+    const uSel = document.getElementById('audit-user');
+    const aSel = document.getElementById('audit-action');
+    const curU = uSel.value, curA = aSel.value;
+    uSel.innerHTML = '<option value="">All Users</option>' +
+      f.users.map(u => `<option ${u===curU?'selected':''}>${u}</option>`).join('');
+    aSel.innerHTML = '<option value="">All Actions</option>' +
+      f.actions.map(a => `<option ${a===curA?'selected':''}>${a}</option>`).join('');
+  } catch(e) {}
+}
+
+async function loadAudit(resetPage) {
+  // Reset to page 0 whenever a filter changes (not when paginating)
+  if (resetPage !== false) S.auditPage = 0;
+  const params = new URLSearchParams({
+    limit:  S.auditPageSize,
+    offset: S.auditPage * S.auditPageSize,
+    search: document.getElementById('audit-search')?.value || '',
+    user:   document.getElementById('audit-user')?.value   || '',
+    action: document.getElementById('audit-action')?.value || '',
+    source: document.getElementById('audit-source')?.value || '',
+    from:   document.getElementById('audit-from')?.value   || '',
+    to:     document.getElementById('audit-to')?.value     || '',
+    sortBy: S.auditSortBy || 'timestamp',
+    sortDir: S.auditSortDir || 'desc',
+  });
+  try {
+    const r = await fetch('/api/audit?' + params);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (!data.entries) throw new Error('Invalid response from audit API');
+    S.auditTotal = data.total || 0;
+    renderAuditTable(data.entries);
+    renderAuditPager();
+  } catch(e) { toast('Audit load error: ' + e.message, 'err'); }
+}
+
+function renderAuditTable(entries) {
+  const el = document.getElementById('audit-table');
+  if (!entries.length) { el.innerHTML = '<div class="empty-msg">No audit entries</div>'; return; }
+
+  el.innerHTML = `<table>
+    <thead><tr>
+      <th>#</th>
+      <th onclick="auditSort('timestamp')">Timestamp</th>
+      <th onclick="auditSort('user')">User</th>
+      <th onclick="auditSort('host')">Host</th>
+      <th onclick="auditSort('action')">Action</th>
+      <th onclick="auditSort('detail')">Detail</th>
+      <th onclick="auditSort('source')">Source</th>
+      <th onclick="auditSort('status')">Status</th>
+    </tr></thead>
+    <tbody>${entries.map((e,i) => {
+      const srcCls = (e.source === 'PuffinMQ' || e.source === 'RMQ QA Utility') ? 'source-app'
+                   : (e.source||'').includes('External') ? 'source-ext' : 'source-det';
+      const actCls = /delete|purge|close/i.test(e.action||'') ? 'action-del'
+                   : /create|connect|open/i.test(e.action||'') ? 'action-cre' : '';
+      const stsCls = (e.status||'').includes('✅') ? 'ok'
+                   : (e.status||'').includes('✗') ? 'err' : 'warn';
+      return `<tr>
+        <td style="color:var(--text-dim)">${S.auditPage * S.auditPageSize + i + 1}</td>
+        <td>${e.timestamp||''}</td>
+        <td><b>${e.user||''}</b></td>
+        <td style="color:var(--text-dim)">${e.host||''}</td>
+        <td class="${actCls}">${e.action||''}</td>
+        <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis" title="${(e.detail||'').replace(/"/g,"'")}">${e.detail||''}</td>
+        <td class="${srcCls}">${e.source||''}</td>
+        <td><span class="tag ${stsCls}">${e.status||''}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+function renderAuditPager() {
+  const total = S.auditTotal;
+  const pages = Math.ceil(total / S.auditPageSize);
+  const cur   = S.auditPage;
+  let html = `<span class="page-info">${total.toLocaleString()} entries · Page ${cur+1} of ${pages||1}</span>`;
+  html += `<button class="page-btn" onclick="auditGo(0)" ${cur===0?'disabled':''}>«</button>`;
+  html += `<button class="page-btn" onclick="auditGo(${cur-1})" ${cur===0?'disabled':''}>‹</button>`;
+  for (let p = Math.max(0, cur-2); p <= Math.min(pages-1, cur+2); p++) {
+    html += `<button class="page-btn ${p===cur?'active':''}" onclick="auditGo(${p})">${p+1}</button>`;
+  }
+  html += `<button class="page-btn" onclick="auditGo(${cur+1})" ${cur>=pages-1?'disabled':''}>›</button>`;
+  html += `<button class="page-btn" onclick="auditGo(${pages-1})" ${cur>=pages-1?'disabled':''}>»</button>`;
+  document.getElementById('audit-pager').innerHTML = html;
+}
+
+function auditGo(page) { S.auditPage = page; loadAudit(false); }
+
+function auditSort(field) {
+  const dir = (S.auditSortBy === field && S.auditSortDir === 'asc') ? 'desc' : 'asc';
+  S.auditSortBy = field;
+  S.auditSortDir = dir;
+  loadAudit(true);
+}
+
+// Generic page header sort handler (client-side ORDER BY)
+function pageSort(field, colIdx) {
+  const page = S.sort.currentPage;
+  if (!page) return;
+  const st = S.sort[page];
+  if (!st) return;
+
+  // Toggle direction if same field, otherwise sort asc on new field
+  if (st.by === field) st.dir = (st.dir === 'asc') ? 'desc' : 'asc';
+  else { st.by = field; st.dir = 'asc'; }
+
+  // Re-render from cache — NO API call, instant response
+  const renderers = {
+    connections: renderConnections,
+    channels:    renderChannels,
+    exchanges:   renderExchanges,
+    queues:      renderQueuesSorted,
+    users:       renderUsers,
+    vhosts:      renderVhosts,
+    policies:    renderPolicies,
+    shovels:     renderShovels,
+  };
+  if (renderers[page]) renderers[page]();
+}
+
+
+
+async function exportAudit() {
+  const params = new URLSearchParams({
+    search: document.getElementById('audit-search')?.value || '',
+    user:   document.getElementById('audit-user')?.value   || '',
+    action: document.getElementById('audit-action')?.value || '',
+    from:   document.getElementById('audit-from')?.value   || '',
+    to:     document.getElementById('audit-to')?.value     || '',
+  });
+  window.location = '/api/audit/export?' + params;
+}
+
+async function purgeAudit() {
+  const days = prompt('Delete audit entries older than how many days?', '90');
+  if (!days || isNaN(days)) return;
+  try {
+    const r = await api('DELETE', `/audit/purge?days=${days}`);
+    toast(`Purged ${r.deleted} old entries ✓`, 'ok');
+    loadAudit();
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+// ══ Backup & Restore (Multiple Queues) ═════════════════════════════════════
+async function backupSelectedQueues() {
+  const sel = getSelectedQueues();
+  if (!sel.length) { toast('Select queues first', 'warn'); return; }
+  
+  try {
+    // OPTIMIZATION: For single queue, use fast direct endpoint (no polling needed)
+    if (sel.length === 1) {
+      const q = sel[0];
+      const response = await fetch(
+        `/api/queues/backup?vhost=${encodeURIComponent(q.vhost)}&name=${encodeURIComponent(q.name)}&count=10000&format=json`,
+        { method: 'POST' }
+      );
+      if (!response.ok) throw new Error('Backup failed');
+      
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'messages.json';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename=([^;]+)/);
+        if (match) filename = match[1].replace(/"/g, '');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast(`Downloaded: ${filename}`, 'ok');
+      return;
+    }
+    
+    // Multi-queue backup uses async endpoint with polling
+    const startResp = await fetch('/api/queues/backup-multiple', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ queues: sel })
+    });
+    
+    if (!startResp.ok) throw new Error('Failed to start backup');
+    
+    // Show progress modal
+    openModal('modal-backup-progress');
+    document.getElementById('backup-footer').style.display = 'none';
+    
+    // Poll for progress
+    let isComplete = false;
+    while (!isComplete) {
+      await new Promise(r => setTimeout(r, 500)); // Wait 500ms between polls
+      
+      const progResp = await fetch('/api/queues/backup-progress');
+      const prog = await progResp.json();
+      
+      // Update UI
+      document.getElementById('backup-status').textContent = prog.status || 'Processing...';
+      document.getElementById('backup-queue-progress').textContent = `${prog.queues_done}/${prog.queues_total}`;
+      document.getElementById('backup-message-count').textContent = prog.messages_fetched.toLocaleString();
+      document.getElementById('backup-current-queue').textContent = prog.current_queue || '--';
+      document.getElementById('backup-detail').textContent = prog.status;
+      
+      // Update progress bars
+      const queuePercent = prog.queues_total > 0 ? (prog.queues_done / prog.queues_total * 100) : 0;
+      document.getElementById('backup-queue-bar').style.width = queuePercent + '%';
+      
+      if (!prog.active) {
+        isComplete = true;
+        document.getElementById('backup-footer').style.display = 'flex';
+        document.getElementById('backup-status').textContent = '✓ Backup Complete!';
+      }
+    }
+  } catch(e) {
+    toast(e.message, 'err');
+    closeModal('modal-backup-progress');
+  }
+}
+
+async function downloadBackup() {
+  try {
+    const response = await fetch('/api/queues/backup-download');
+    if (!response.ok) throw new Error('Download failed');
+    
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'backup.zip';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename=([^;]+)/);
+      if (match) filename = match[1].replace(/"/g, '');
+    }
+    
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast(`Downloaded ${filename} ✓`, 'ok');
+    closeModal('modal-backup-progress');
+  } catch(e) {
+    toast(e.message, 'err');
+  }
+}
+
+function switchRestoreTab(btn) {
+  // Update active tab button
+  document.querySelectorAll('.restore-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  
+  // Show/hide content
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.restore-tab-content').forEach(el => el.style.display = 'none');
+  document.getElementById(`restore-tab-${tab}`).style.display = 'block';
+  
+  // Load queues if needed
+  if (!window._restoreQueues) loadRestoreQueues();
+}
+
+function openRestoreModal() {
+  openModal('modal-restore');
+  // Load queues when modal opens
+  if (!window._restoreQueues) loadRestoreQueues();
+}
+
+async function loadRestoreQueues() {
+  try {
+    const queues = await api('GET', '/queues');
+    window._restoreQueues = queues;
+    
+    // Populate file queue dropdown
+    const fileOpts = queues.map((q, i) => `<option value="${i}">${q.vhost}/${q.name}</option>`).join('');
+    document.getElementById('restore-file-queue').innerHTML = '<option value="">-- Detect from filename --</option>' + fileOpts;
+    
+    // Populate JSON queue dropdown (searchable)
+    const jsonOpts = queues.map((q, i) => `<option value="${i}" data-queue="${q.vhost}/${q.name}">${q.vhost}/${q.name}</option>`).join('');
+    document.getElementById('restore-json-queue').innerHTML = jsonOpts || '<option>No queues available</option>';
+  } catch(e) { toast(e.message, 'err'); }
+}
+
+function filterQueueList() {
+  const searchText = document.getElementById('restore-json-search').value.toLowerCase();
+  const options = document.getElementById('restore-json-queue').options;
+  
+  for (let i = 0; i < options.length; i++) {
+    const text = options[i].textContent.toLowerCase();
+    options[i].style.display = text.includes(searchText) ? 'block' : 'none';
+  }
+}
+
+async function handleRestoreFileUpload(fileInput) {
+  if (!fileInput.files || fileInput.files.length === 0) {
+    document.getElementById('restore-file-info').textContent = 'No file selected';
+    document.getElementById('restore-file-confirm').style.display = 'none';
+    return;
+  }
+  
+  const file = fileInput.files[0];
+  const fullFilename = file.name.replace('.json', '').replace('.zip', '');
+  
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    // Check if it's an array or object
+    const msgs = Array.isArray(data) ? data : (data.messages || [data]);
+    const msgCount = msgs.length;
+    
+    // Store for later use
+    window._restoreData = msgs;
+    window._restoreFilename = fullFilename;
+    
+    // Load queues for dropdown
+    if (!window._restoreQueues) {
+      await loadRestoreQueues();
+    }
+    
+    // Auto-detect queue name from filename
+    // Format: {safe_vhost}_{safe_name}_{timestamp}
+    // Timestamp format: YYYYMMDD_HHMMSS (15 chars including underscore)
+    const filenameWithoutTs = fullFilename.substring(0, fullFilename.length - 15);
+    
+    let autoQueueIdx = -1;
+    let autoQueue = null;
+    
+    // Try to match the filename pattern to actual queues
+    if (window._restoreQueues && window._restoreQueues.length > 0) {
+      // Look for a queue that matches the end of the filename
+      for (let i = 0; i < window._restoreQueues.length; i++) {
+        const q = window._restoreQueues[i];
+        const safe_vhost = q.vhost === '/' ? 'root' : q.vhost.replace(/\//g, '_');
+        const safe_name = q.name.replace(/\//g, '_');
+        const expectedPrefix = `${safe_vhost}_${safe_name}`;
+        
+        if (filenameWithoutTs === expectedPrefix || fullFilename.startsWith(expectedPrefix + '_')) {
+          autoQueueIdx = i;
+          autoQueue = q;
+          break;
+        }
+      }
+    }
+    
+    // Show file info and auto-select queue
+    document.getElementById('restore-file-info').innerHTML = 
+      `✓ Loaded <b>${msgCount}</b> message(s)<br>` +
+      `Filename: <b>${fullFilename}</b><br>` +
+      (autoQueue ? `Auto-detected queue: <b>${autoQueue.vhost}/${autoQueue.name}</b>` : '');
+    
+    // Auto-populate the queue dropdown if detected
+    if (autoQueueIdx >= 0) {
+      document.getElementById('restore-file-queue').value = autoQueueIdx;
+      window._autoSelectedQueue = autoQueue;
+    } else {
+      document.getElementById('restore-file-queue').value = '';
+      window._autoSelectedQueue = null;
+    }
+    
+    document.getElementById('restore-file-confirm').style.display = 'block';
+  } catch(e) {
+    toast('Invalid JSON file', 'err');
+    document.getElementById('restore-file-info').textContent = 'Error reading file';
+    document.getElementById('restore-file-confirm').style.display = 'none';
+  }
+}
+
+async function publishRestoredMessages() {
+  const activeTab = document.querySelector('.restore-tab.active').dataset.tab;
+  
+  if (activeTab === 'from-file') {
+    await publishFromFile();
+  } else {
+    await publishDirectJSON();
+  }
+}
+
+async function publishFromFile() {
+  if (!window._restoreData) { toast('Load a file first', 'warn'); return; }
+  
+  let targetQueue = null;
+  const manualSel = document.getElementById('restore-file-queue').value;
+  
+  // Check if user manually selected a queue
+  if (manualSel !== '') {
+    const queueIdx = parseInt(manualSel);
+    targetQueue = window._restoreQueues[queueIdx];
+    if (!targetQueue) { toast('Queue not found', 'err'); return; }
+  } 
+  // Check if queue was auto-detected from filename
+  else if (window._autoSelectedQueue) {
+    targetQueue = window._autoSelectedQueue;
+  }
+  // Try to auto-detect from filename as fallback
+  else {
+    const filename = window._restoreFilename;
+    const matching = window._restoreQueues.find(q => 
+      q.name.toLowerCase() === filename.toLowerCase() ||
+      q.name === filename
+    );
+    
+    if (!matching) {
+      toast(`Queue not auto-detected. Please select manually.`, 'warn');
+      return;
+    }
+    targetQueue = matching;
+  }
+  
+  // Disable button and show loading
+  const publishBtn = document.getElementById('restore-btn');
+  const originalText = publishBtn.textContent;
+  publishBtn.disabled = true;
+  publishBtn.textContent = '⏳ Publishing...';
+  console.log('Starting publish from file:', { vhost: targetQueue.vhost, name: targetQueue.name, msgCount: window._restoreData.length });
+  
+  try {
+    // Create abort controller with 60 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
+    const response = await fetch('/api/queues/restore-from-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vhost: targetQueue.vhost,
+        name: targetQueue.name,
+        messages: window._restoreData
+      }),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    const data = await response.json();
+    console.log('Restore response:', data);
+    if (!response.ok) throw new Error(data.error || 'Restore failed');
+    
+    toast(`✓ Published ${data.published} messages to "${targetQueue.vhost}/${targetQueue.name}" (${data.total} total)`, 'ok');
+    closeModal('modal-restore');
+    loadQueues();
+  } catch(e) {
+    toast(e.message, 'err');
+  } finally {
+    publishBtn.disabled = false;
+    publishBtn.textContent = originalText;
+  }
+}
+
+async function publishDirectJSON() {
+  const jsonStr = document.getElementById('restore-json-content').value.trim();
+  const queueSel = document.getElementById('restore-json-queue').value;
+  
+  if (!jsonStr) { toast('Paste JSON content', 'warn'); return; }
+  if (!queueSel) { toast('Select a queue', 'warn'); return; }
+  
+  // Disable button and show loading
+  const publishBtn = document.getElementById('restore-btn');
+  const originalText = publishBtn.textContent;
+  publishBtn.disabled = true;
+  publishBtn.textContent = '⏳ Publishing...';
+  
+  try {
+    let msgs = JSON.parse(jsonStr);
+    if (!Array.isArray(msgs)) msgs = [msgs];
+    
+    // Find queue details
+    const queueIdx = parseInt(queueSel);
+    const targetQueue = window._restoreQueues[queueIdx];
+    if (!targetQueue) throw new Error('Queue not found');
+    
+    console.log('Starting publish direct JSON:', { vhost: targetQueue.vhost, name: targetQueue.name, msgCount: msgs.length });
+    
+    // Create abort controller with 60 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    
+    const response = await fetch('/api/queues/restore-from-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vhost: targetQueue.vhost,
+        name: targetQueue.name,
+        messages: msgs
+      }),
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Restore failed');
+    
+    toast(`✓ Published ${data.published} messages to "${targetQueue.name}" (${data.total} total)`, 'ok');
+    document.getElementById('restore-json-content').value = '';
+    document.getElementById('restore-json-search').value = '';
+    closeModal('modal-restore');
+    loadQueues();
+  } catch(e) {
+    toast(e.message, 'err');
+  } finally {
+    publishBtn.disabled = false;
+    publishBtn.textContent = originalText;
+  }
+}
+
+// ══ Init ═════════════════════════════════════════════════════════════════════
+(async () => {
+  // Show the configured RabbitMQ host/IP (read-only — credentials stay server-side)
+  try {
+    const cfg = await api('GET', '/config');
+    const rmq = cfg.rabbitmq || {};
+    document.getElementById('inp-host').value = `${rmq.host}:${rmq.port}`;
+  } catch(e) {
+    document.getElementById('inp-host').value = '(unavailable)';
+  }
+  // Restore connection state if server already connected
+  try {
+    const s = await api('GET', '/status');
+    if (s.connected) {
+      S.connected = true;
+      setConnected(true, { overview: {}, host: s.host });
+      document.getElementById('status-text').textContent = `Connected — ${s.host}`;
+      loadOverview();
+      startAutoRefresh();
+    }
+  } catch(e) {}
+  // Load audit even before connecting
+  loadAuditFilters();
+  loadAudit();
+})();
+</script>
+</body>
+</html>

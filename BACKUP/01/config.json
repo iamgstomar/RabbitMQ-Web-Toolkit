@@ -1,0 +1,98 @@
+{
+  "rabbitmq": {
+    "host": "172.16.4.155",
+    "port": 15672,
+    "username": "stc",
+    "password": "stc@123",
+    "vhost": "/",
+    "ssl": false,
+    "verify_ssl": false,
+    "timeout": 1000,
+    "schemes": ["http", "https"]
+  },
+
+  "database": {
+    "type": "mssql",
+    "driver": "ODBC Driver 17 for SQL Server",
+    "host": "172.16.4.156",
+    "port": 1433,
+    "name": "PuffinMT_STC",
+    "username": "sa",
+    "password": "UATsql2022",
+    "schema": "dbo",
+    "table_audit": "audit_log",
+    "table_events": "rmq_events",
+    "table_snapshots": "rmq_snapshots",
+    "pool_size": 100,
+    "pool_timeout": 3000,
+    "auto_create_tables": true,
+    "trusted_connection": false,
+    "encrypt": false,
+    "trust_server_certificate": true
+  },
+
+  "logging": {
+    "level": "DEBUG",
+    "file": "logs/rmq_qa.log",
+    "max_bytes": 10485760,
+    "backup_count": 5,
+    "console": true,
+    "format": "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    "date_format": "%Y-%m-%d %H:%M:%S",
+    "json_format": false,
+    "log_api_calls": true,
+    "log_db_queries": true,
+    "log_poll_cycles": true
+  },
+
+  "audit": {
+    "retention_days": 90,
+    "archive_to_csv": true,
+    "archive_folder": "archives",
+    "event_exchange": true,
+    "poll_interval_seconds": 10,
+    "plugin_poll_interval_seconds": 3,
+    "dedup_window_minutes": 1,
+    "dedup_cache_size": 500,
+    "max_detail_length": 1000,
+    "store_raw_event": true
+  },
+
+  "ports": {
+    "scan_on_connect": true,
+    "rescan_interval_seconds": 60,
+    "timeout_seconds": 1,
+    "monitor": {
+      "5672":  "AMQP",
+      "5671":  "AMQP (TLS)",
+      "15672": "Management HTTP API",
+      "15671": "Management HTTPS API",
+      "15692": "Prometheus Metrics",
+      "1883":  "MQTT",
+      "8883":  "MQTT (TLS)",
+      "61613": "STOMP",
+      "61614": "STOMP (TLS/WS)",
+      "15674": "STOMP over WebSocket",
+      "15670": "Stream",
+      "4369":  "EPMD (Erlang Port Mapper)"
+    }
+  },
+
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "debug": true,
+    "secret_key": "CHANGE_ME_IN_PRODUCTION_USE_RANDOM_STRING",
+    "session_timeout_minutes": 60,
+    "auto_open_browser": true
+  },
+
+  "ui": {
+    "page_title": "RMQ QA Utility",
+    "refresh_interval_seconds": 30,
+    "default_tab": "overview",
+    "rows_per_page": 50,
+    "date_format": "%Y-%m-%d %H:%M:%S",
+    "theme": "dark"
+  }
+}
